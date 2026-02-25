@@ -1,0 +1,118 @@
+
+##############################################
+# Java / Maven
+##############################################
+
+# Compiled class files
+*.class
+
+# Log files
+*.log
+
+# Maven target directory
+target/
+
+# Maven wrapper logs
+.mvn/wrapper/maven-wrapper.jar
+
+##############################################
+# Spring Boot
+##############################################
+
+# Spring Boot DevTools restart
+.restart/
+
+# Spring Boot build output
+build/
+
+##############################################
+# IntelliJ IDEA
+##############################################
+
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+##############################################
+# VS Code
+##############################################
+
+.vscode/
+
+##############################################
+# Eclipse
+##############################################
+
+.project
+.classpath
+.settings/
+
+##############################################
+# OS Files
+##############################################
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+##############################################
+# Logs & Temp
+##############################################
+
+logs/
+*.log
+*.tmp
+
+##############################################
+# Environment / Secrets
+##############################################
+
+# Environment variable files
+.env
+.env.local
+.env.prod
+
+# Application override files
+application-local.yml
+application-prod.yml
+
+##############################################
+# Docker
+##############################################
+
+docker-compose.override.yml
+*.tar
+
+##############################################
+# Test & Coverage
+##############################################
+
+/coverage/
+*.exec
+
+##############################################
+# Misc
+##############################################
+
+*.swp
+*.bak
+
+
+# IntelliJ
+.idea/
+*.iml
+
+# Maven
+target/
+
+# macOS
+.DS_Store
+
+.uploads
+
+chat-frontend
