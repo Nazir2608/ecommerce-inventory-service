@@ -1,6 +1,7 @@
 package com.nazir.inventory.repository;
 
-import com.nazir.inventory.entity.Product;
+import com.nazir.inventory.product.entity.Product;
+import com.nazir.inventory.product.repository.ProductRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;

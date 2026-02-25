@@ -1,7 +1,8 @@
 package com.nazir.inventory.exception;
 
-import com.nazir.inventory.common.dto.ErrorResponse;
 import java.time.Instant;
+
+import com.nazir.inventory.common.dto.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

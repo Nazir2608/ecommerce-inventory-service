@@ -1,6 +1,6 @@
-package com.nazir.inventory.dto;
+package com.nazir.inventory.reservation.dto;
 
-import com.nazir.inventory.entity.ReservationStatus;
+import com.nazir.inventory.reservation.entity.ReservationStatus;
 import java.time.Instant;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

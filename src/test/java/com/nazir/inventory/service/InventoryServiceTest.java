@@ -1,14 +1,15 @@
 package com.nazir.inventory.service;
 
-import com.nazir.inventory.dto.ReservationRequest;
-import com.nazir.inventory.dto.ReservationResponse;
-import com.nazir.inventory.entity.Reservation;
-import com.nazir.inventory.entity.ReservationStatus;
+import com.nazir.inventory.reservation.dto.ReservationRequest;
+import com.nazir.inventory.reservation.dto.ReservationResponse;
+import com.nazir.inventory.reservation.entity.Reservation;
+import com.nazir.inventory.reservation.entity.ReservationStatus;
 import com.nazir.inventory.exception.DuplicateOrderException;
 import com.nazir.inventory.exception.InvalidStateException;
 import com.nazir.inventory.exception.OutOfStockException;
-import com.nazir.inventory.repository.ProductRepository;
-import com.nazir.inventory.repository.ReservationRepository;
+import com.nazir.inventory.product.repository.ProductRepository;
+import com.nazir.inventory.reservation.repository.ReservationRepository;
+import com.nazir.inventory.reservation.service.ReservationServiceImpl;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,7 +33,7 @@ class InventoryServiceTest {
     private ReservationRepository reservationRepository;
 
     @InjectMocks
-    private InventoryServiceImpl inventoryService;
+    private ReservationServiceImpl inventoryService;
 
     private ReservationRequest reservationRequest;
 

@@ -1,9 +1,10 @@
 package com.nazir.inventory.common.dto;
 
-import java.time.Instant;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+
+import java.time.Instant;
 
 @Getter
 @Builder

@@ -1,4 +1,4 @@
-package com.nazir.inventory.entity;
+package com.nazir.inventory.reservation.entity;
 
 public enum ReservationStatus {
     RESERVED,

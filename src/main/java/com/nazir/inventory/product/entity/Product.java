@@ -1,4 +1,4 @@
-package com.nazir.inventory.entity;
+package com.nazir.inventory.product.entity;
 
 import com.nazir.inventory.common.entity.BaseEntity;
 import jakarta.persistence.Column;

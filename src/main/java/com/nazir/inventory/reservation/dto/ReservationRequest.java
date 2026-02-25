@@ -1,4 +1,4 @@
-package com.nazir.inventory.dto;
+package com.nazir.inventory.reservation.dto;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;

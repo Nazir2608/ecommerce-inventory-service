@@ -1,66 +1,34 @@
-package com.nazir.inventory.service;
+package com.nazir.inventory.reservation.service;
 
-import com.nazir.inventory.dto.ProductRequest;
-import com.nazir.inventory.dto.ProductResponse;
-import com.nazir.inventory.dto.ReservationRequest;
-import com.nazir.inventory.dto.ReservationResponse;
-import com.nazir.inventory.entity.Product;
-import com.nazir.inventory.entity.Reservation;
-import com.nazir.inventory.entity.ReservationStatus;
 import com.nazir.inventory.exception.DuplicateOrderException;
 import com.nazir.inventory.exception.InvalidStateException;
 import com.nazir.inventory.exception.OutOfStockException;
 import com.nazir.inventory.exception.ResourceNotFoundException;
-import com.nazir.inventory.repository.ProductRepository;
-import com.nazir.inventory.repository.ReservationRepository;
+import com.nazir.inventory.product.repository.ProductRepository;
+import com.nazir.inventory.reservation.dto.ReservationRequest;
+import com.nazir.inventory.reservation.dto.ReservationResponse;
+import com.nazir.inventory.reservation.entity.Reservation;
+import com.nazir.inventory.reservation.entity.ReservationStatus;
+import com.nazir.inventory.reservation.repository.ReservationRepository;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import org.springframework.beans.factory.annotation.Value;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class InventoryServiceImpl implements InventoryService {
+public class ReservationServiceImpl implements ReservationService {
 
     private final ProductRepository productRepository;
     private final ReservationRepository reservationRepository;
 
     @Value("${inventory.reservation.expiry-minutes:15}")
     private long reservationExpiryMinutes;
-
-    @Override
-    @Transactional
-    public ProductResponse createProduct(ProductRequest request) {
-        log.info("Creating product with name: {}", request.getName());
-        Product product = Product.builder()
-                .name(request.getName())
-                .totalStock(request.getTotalStock())
-                .reservedStock(0)
-                .availableStock(request.getTotalStock())
-                .build();
-        Product savedProduct = productRepository.save(product);
-        log.info("Product created successfully with ID: {}", savedProduct.getId());
-        return mapToProductResponse(savedProduct);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public ProductResponse getProduct(Long id) {
-        log.info("Fetching product with ID: {}", id);
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> {
-                    log.error("Product not found with ID: {}", id);
-                    return new ResourceNotFoundException("Product not found with id: " + id);
-                });
-        return mapToProductResponse(product);
-    }
 
     @Override
     @Transactional
@@ -186,16 +154,6 @@ public class InventoryServiceImpl implements InventoryService {
                 log.error("Error expiring reservation for Order ID: {}", reservation.getOrderId(), e);
             }
         }
-    }
-
-    private ProductResponse mapToProductResponse(Product product) {
-        return ProductResponse.builder()
-                .id(product.getId())
-                .name(product.getName())
-                .totalStock(product.getTotalStock())
-                .reservedStock(product.getReservedStock())
-                .availableStock(product.getAvailableStock())
-                .build();
     }
 
     private ReservationResponse mapToReservationResponse(Reservation reservation) {

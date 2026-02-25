@@ -1,7 +1,7 @@
-package com.nazir.inventory.repository;
+package com.nazir.inventory.reservation.repository;
 
-import com.nazir.inventory.entity.Reservation;
-import com.nazir.inventory.entity.ReservationStatus;
+import com.nazir.inventory.reservation.entity.Reservation;
+import com.nazir.inventory.reservation.entity.ReservationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

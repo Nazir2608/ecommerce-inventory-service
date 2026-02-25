@@ -1,4 +1,4 @@
-package com.nazir.inventory.dto;
+package com.nazir.inventory.product.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
