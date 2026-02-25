@@ -14,4 +14,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     boolean existsByOrderId(String orderId);
     Optional<Reservation> findByOrderId(String orderId);
     List<Reservation> findAllByStatusAndExpiresAtBefore(ReservationStatus status, Instant now);
+    void deleteByProductId(Long productId);
+    List<Reservation> findByProductId(Long productId);
 }

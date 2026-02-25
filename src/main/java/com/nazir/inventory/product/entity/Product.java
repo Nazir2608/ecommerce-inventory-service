@@ -39,6 +39,10 @@ public class Product extends BaseEntity {
     @Column(name = "available_stock", nullable = false)
     private Integer availableStock;
 
+    @Column(name = "flash_sale_enabled", nullable = false)
+    @Builder.Default
+    private Boolean flashSaleEnabled = false;
+
     @Version
     private Long version;
 }
