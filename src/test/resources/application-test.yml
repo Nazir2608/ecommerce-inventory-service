@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/inventory_test?createDatabaseIfNotExist=true&characterEncoding=utf8&useSSL=false&serverTimezone=UTC
+    username: root
+    password: MySql@123
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
