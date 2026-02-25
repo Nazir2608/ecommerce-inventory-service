@@ -13,3 +13,15 @@ spring:
       hibernate:
         format_sql: true
         jdbc.time_zone: UTC
+
+logging:
+    level:
+      root: INFO
+      com.nazir.inventory: DEBUG
+
+inventory:
+  scheduler:
+    expiry-rate: 60000 # 1 minute in milliseconds
+  reservation:
+    expiry-minutes: 1 # Default reservation expiry time
+

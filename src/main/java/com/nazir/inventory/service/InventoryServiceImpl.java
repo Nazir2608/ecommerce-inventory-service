@@ -22,6 +22,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.beans.factory.annotation.Value;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -29,7 +31,9 @@ public class InventoryServiceImpl implements InventoryService {
 
     private final ProductRepository productRepository;
     private final ReservationRepository reservationRepository;
-    private static final long RESERVATION_EXPIRY_MINUTES = 1;
+
+    @Value("${inventory.reservation.expiry-minutes:15}")
+    private long reservationExpiryMinutes;
 
     @Override
     @Transactional
@@ -79,7 +83,7 @@ public class InventoryServiceImpl implements InventoryService {
                 .productId(request.getProductId())
                 .quantity(request.getQuantity())
                 .status(ReservationStatus.RESERVED)
-                .expiresAt(Instant.now().plus(Duration.ofMinutes(RESERVATION_EXPIRY_MINUTES)))
+                .expiresAt(Instant.now().plus(Duration.ofMinutes(reservationExpiryMinutes)))
                 .build();
         
         Reservation savedReservation = reservationRepository.save(reservation);
@@ -165,14 +169,12 @@ public class InventoryServiceImpl implements InventoryService {
 
     @Override
     @Transactional
-    @Scheduled(fixedRate = 60000)
     public void expireReservations() {
         log.debug("Running expiry scheduler...");
         List<Reservation> expiredReservations = reservationRepository.findAllByStatusAndExpiresAtBefore(ReservationStatus.RESERVED, Instant.now());
         if (expiredReservations.isEmpty()) {
             return;
         }
-
         log.info("Found {} expired reservations to process", expiredReservations.size());
         for (Reservation reservation : expiredReservations) {
             try {
