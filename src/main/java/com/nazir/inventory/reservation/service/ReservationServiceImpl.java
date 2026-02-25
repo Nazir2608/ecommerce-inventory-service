@@ -5,19 +5,20 @@ import com.nazir.inventory.exception.InvalidStateException;
 import com.nazir.inventory.exception.OutOfStockException;
 import com.nazir.inventory.exception.ResourceNotFoundException;
 import com.nazir.inventory.product.repository.ProductRepository;
+import com.nazir.inventory.event.InventoryEvent;
+import com.nazir.inventory.kafka.producer.InventoryEventProducer;
 import com.nazir.inventory.reservation.dto.ReservationRequest;
 import com.nazir.inventory.reservation.dto.ReservationResponse;
 import com.nazir.inventory.reservation.entity.Reservation;
 import com.nazir.inventory.reservation.entity.ReservationStatus;
 import com.nazir.inventory.reservation.event.ReservationStockRestoredEvent;
 import com.nazir.inventory.reservation.repository.ReservationRepository;
+import com.nazir.inventory.reservation.service.expiration.ReservationExpirationService;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.hibernate.validator.internal.util.stereotypes.Lazy;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -31,10 +32,8 @@ public class ReservationServiceImpl implements ReservationService {
     private final ProductRepository productRepository;
     private final ReservationRepository reservationRepository;
     private final ApplicationEventPublisher eventPublisher;
-
-    @Lazy
-    @Autowired
-    private ReservationService self;
+    private final InventoryEventProducer inventoryEventProducer;
+    private final ReservationExpirationService reservationExpirationService;
 
     @Value("${inventory.reservation.expiry-minutes:15}")
     private long reservationExpiryMinutes;
@@ -65,6 +64,9 @@ public class ReservationServiceImpl implements ReservationService {
         
         Reservation savedReservation = reservationRepository.save(reservation);
         log.info("Reservation successful for Order ID: {}, Reservation ID: {}, Expires at: {}", request.getOrderId(), savedReservation.getId(), savedReservation.getExpiresAt());
+        
+        publishInventoryEvent(savedReservation, "RESERVED");
+        
         return mapToReservationResponse(savedReservation);
     }
 
@@ -74,6 +76,11 @@ public class ReservationServiceImpl implements ReservationService {
         log.info("Confirming reservation for Order ID: {}", orderId);
         Reservation reservation = reservationRepository.findByOrderId(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Reservation not found for orderId: " + orderId));
+
+        if (reservation.getStatus() == ReservationStatus.CONFIRMED) {
+            log.warn("Reservation already confirmed for Order ID: {}", orderId);
+            return mapToReservationResponse(reservation);
+        }
 
         if (reservation.getStatus() != ReservationStatus.RESERVED) {
             log.warn("Cannot confirm reservation in status: {} for Order ID: {}", reservation.getStatus(), orderId);
@@ -88,6 +95,7 @@ public class ReservationServiceImpl implements ReservationService {
         reservation.setStatus(ReservationStatus.CONFIRMED);
         Reservation savedReservation = reservationRepository.save(reservation);
         log.info("Reservation confirmed and stock deducted for Order ID: {}", orderId);
+        publishInventoryEvent(savedReservation, "CONFIRMED");
         return mapToReservationResponse(savedReservation);
     }
 
@@ -113,6 +121,7 @@ public class ReservationServiceImpl implements ReservationService {
         reservation.setStatus(ReservationStatus.RELEASED);
         Reservation savedReservation = reservationRepository.save(reservation);
         log.info("Reservation released and stock restored for Order ID: {}", orderId);
+        publishInventoryEvent(savedReservation, "RELEASED");
         return mapToReservationResponse(savedReservation);
     }
 
@@ -133,8 +142,11 @@ public class ReservationServiceImpl implements ReservationService {
             log.info("Releasing reserved stock for Order ID: {}", orderId);
             productRepository.restoreStock(reservation.getProductId(), reservation.getQuantity());
             eventPublisher.publishEvent(new ReservationStockRestoredEvent(reservation.getProductId(), reservation.getQuantity()));
+        } else if (reservation.getStatus() == ReservationStatus.CANCELLED || reservation.getStatus() == ReservationStatus.RELEASED || reservation.getStatus() == ReservationStatus.EXPIRED) {
+            log.warn("Reservation already in terminal state: {} for Order ID: {}", reservation.getStatus(), orderId);
+            return mapToReservationResponse(reservation);
         } else {
-            // Case 3: Already cancelled/released/expired
+            // Case 3: Unknown/Invalid state
             log.warn("Cannot cancel reservation in status: {} for Order ID: {}", reservation.getStatus(), orderId);
             throw new InvalidStateException("Reservation must be in RESERVED or CONFIRMED state to cancel");
         }
@@ -142,6 +154,7 @@ public class ReservationServiceImpl implements ReservationService {
         reservation.setStatus(ReservationStatus.CANCELLED);
         Reservation savedReservation = reservationRepository.save(reservation);
         log.info("Reservation cancelled for Order ID: {}", orderId);
+        publishInventoryEvent(savedReservation, "CANCELLED");
         return mapToReservationResponse(savedReservation);
     }
 
@@ -155,7 +168,7 @@ public class ReservationServiceImpl implements ReservationService {
         log.info("Found {} expired reservations to process", expiredReservations.size());
         for (Reservation reservation : expiredReservations) {
             try {
-               self.processExpiration(reservation);
+               reservationExpirationService.processExpiration(reservation);
             } catch (Exception e) {
                 log.error("Error expiring reservation for Order ID: {}", reservation.getOrderId(), e);
             }
@@ -163,15 +176,8 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
-    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public void processExpiration(Reservation reservation) {
-        int rows = productRepository.restoreStock(reservation.getProductId(), reservation.getQuantity());
-        if (rows > 0) {
-            eventPublisher.publishEvent(new ReservationStockRestoredEvent(reservation.getProductId(), reservation.getQuantity()));
-        }
-        reservation.setStatus(ReservationStatus.EXPIRED);
-        reservationRepository.save(reservation);
-        log.info("Expired reservation for Order ID: {}", reservation.getOrderId());
+        reservationExpirationService.processExpiration(reservation);
     }
 
     private ReservationResponse mapToReservationResponse(Reservation reservation) {
@@ -183,5 +189,17 @@ public class ReservationServiceImpl implements ReservationService {
                 .status(reservation.getStatus())
                 .expiresAt(reservation.getExpiresAt())
                 .build();
+    }
+
+    private void publishInventoryEvent(Reservation reservation, String eventType) {
+        InventoryEvent event = InventoryEvent.builder()
+                .eventId(java.util.UUID.randomUUID().toString())
+                .eventType(eventType)
+                .orderId(reservation.getOrderId())
+                .productId(reservation.getProductId())
+                .quantity(reservation.getQuantity())
+                .timestamp(Instant.now())
+                .build();
+        inventoryEventProducer.publishEvent(event);
     }
 }
