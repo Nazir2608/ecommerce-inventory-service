@@ -24,8 +24,9 @@ class ProductRepositoryTest {
                 .name("Test Product")
                 .totalStock(10)
                 .reservedStock(0)
+                .availableStock(10)
                 .build();
-        productRepository.save(product);
+        product = productRepository.save(product);
 
         // Act
         int rowsAffected = productRepository.reserveStock(product.getId(), 5);
@@ -35,6 +36,7 @@ class ProductRepositoryTest {
         
         Product updatedProduct = productRepository.findById(product.getId()).orElseThrow();
         assertThat(updatedProduct.getReservedStock()).isEqualTo(5);
+        assertThat(updatedProduct.getAvailableStock()).isEqualTo(5);
     }
 
     @Test
@@ -44,8 +46,9 @@ class ProductRepositoryTest {
                 .name("Test Product")
                 .totalStock(10)
                 .reservedStock(8)
+                .availableStock(2)
                 .build();
-        productRepository.save(product);
+        product = productRepository.save(product);
 
         // Act
         int rowsAffected = productRepository.reserveStock(product.getId(), 5);
@@ -55,5 +58,6 @@ class ProductRepositoryTest {
         
         Product updatedProduct = productRepository.findById(product.getId()).orElseThrow();
         assertThat(updatedProduct.getReservedStock()).isEqualTo(8);
+        assertThat(updatedProduct.getAvailableStock()).isEqualTo(2);
     }
 }

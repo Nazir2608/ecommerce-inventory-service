@@ -36,6 +36,9 @@ public class Product extends BaseEntity {
     @Column(name = "reserved_stock", nullable = false)
     private Integer reservedStock;
 
+    @Column(name = "available_stock", nullable = false)
+    private Integer availableStock;
+
     @Version
     private Long version;
 }

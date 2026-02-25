@@ -11,6 +11,18 @@ import org.springframework.stereotype.Repository;
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
     @Modifying(clearAutomatically = true)
-    @Query("UPDATE Product p SET p.reservedStock = p.reservedStock + :qty WHERE p.id = :productId AND (p.totalStock - p.reservedStock) >= :qty")
+    @Query("UPDATE Product p SET p.reservedStock = p.reservedStock + :qty, p.availableStock = p.availableStock - :qty WHERE p.id = :productId AND p.availableStock >= :qty")
     int reserveStock(@Param("productId") Long productId, @Param("qty") int qty);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Product p SET p.reservedStock = p.reservedStock - :qty, p.availableStock = p.availableStock + :qty WHERE p.id = :productId AND p.reservedStock >= :qty")
+    int restoreStock(@Param("productId") Long productId, @Param("qty") int qty);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Product p SET p.reservedStock = p.reservedStock - :qty, p.totalStock = p.totalStock - :qty WHERE p.id = :productId AND p.reservedStock >= :qty")
+    int confirmStock(@Param("productId") Long productId, @Param("qty") int qty);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Product p SET p.totalStock = p.totalStock + :qty, p.availableStock = p.availableStock + :qty WHERE p.id = :productId")
+    int restockProduct(@Param("productId") Long productId, @Param("qty") int qty);
 }

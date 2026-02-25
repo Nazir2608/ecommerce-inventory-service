@@ -9,4 +9,8 @@ public interface InventoryService {
     ProductResponse createProduct(ProductRequest request);
     ProductResponse getProduct(Long id);
     ReservationResponse reserveInventory(ReservationRequest request);
+    ReservationResponse confirmReservation(String orderId);
+    ReservationResponse releaseReservation(String orderId);
+    ReservationResponse cancelReservation(String orderId);
+    void expireReservations();
 }

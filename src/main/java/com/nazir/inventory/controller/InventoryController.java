@@ -68,4 +68,46 @@ public class InventoryController {
                         .build()
         );
     }
+
+    @PostMapping("/reservations/{orderId}/confirm")
+    public ResponseEntity<ApiResponse<ReservationResponse>> confirmReservation(@PathVariable String orderId) {
+        log.info("Received request to confirm reservation for Order ID: {}", orderId);
+        ReservationResponse response = inventoryService.confirmReservation(orderId);
+        return ResponseEntity.ok(
+                ApiResponse.<ReservationResponse>builder()
+                        .success(true)
+                        .data(response)
+                        .message("Reservation confirmed successfully")
+                        .timestamp(Instant.now())
+                        .build()
+        );
+    }
+
+    @PostMapping("/reservations/{orderId}/release")
+    public ResponseEntity<ApiResponse<ReservationResponse>> releaseReservation(@PathVariable String orderId) {
+        log.info("Received request to release reservation for Order ID: {}", orderId);
+        ReservationResponse response = inventoryService.releaseReservation(orderId);
+        return ResponseEntity.ok(
+                ApiResponse.<ReservationResponse>builder()
+                        .success(true)
+                        .data(response)
+                        .message("Reservation released successfully")
+                        .timestamp(Instant.now())
+                        .build()
+        );
+    }
+
+    @PostMapping("/reservations/{orderId}/cancel")
+    public ResponseEntity<ApiResponse<ReservationResponse>> cancelReservation(@PathVariable String orderId) {
+        log.info("Received request to cancel reservation for Order ID: {}", orderId);
+        ReservationResponse response = inventoryService.cancelReservation(orderId);
+        return ResponseEntity.ok(
+                ApiResponse.<ReservationResponse>builder()
+                        .success(true)
+                        .data(response)
+                        .message("Reservation cancelled successfully")
+                        .timestamp(Instant.now())
+                        .build()
+        );
+    }
 }

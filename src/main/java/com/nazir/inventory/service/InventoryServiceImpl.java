@@ -8,14 +8,17 @@ import com.nazir.inventory.entity.Product;
 import com.nazir.inventory.entity.Reservation;
 import com.nazir.inventory.entity.ReservationStatus;
 import com.nazir.inventory.exception.DuplicateOrderException;
+import com.nazir.inventory.exception.InvalidStateException;
 import com.nazir.inventory.exception.OutOfStockException;
 import com.nazir.inventory.exception.ResourceNotFoundException;
 import com.nazir.inventory.repository.ProductRepository;
 import com.nazir.inventory.repository.ReservationRepository;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +39,7 @@ public class InventoryServiceImpl implements InventoryService {
                 .name(request.getName())
                 .totalStock(request.getTotalStock())
                 .reservedStock(0)
+                .availableStock(request.getTotalStock())
                 .build();
         Product savedProduct = productRepository.save(product);
         log.info("Product created successfully with ID: {}", savedProduct.getId());
@@ -85,13 +89,110 @@ public class InventoryServiceImpl implements InventoryService {
         return mapToReservationResponse(savedReservation);
     }
 
+    @Override
+    @Transactional
+    public ReservationResponse confirmReservation(String orderId) {
+        log.info("Confirming reservation for Order ID: {}", orderId);
+        Reservation reservation = reservationRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Reservation not found for orderId: " + orderId));
+
+        if (reservation.getStatus() != ReservationStatus.RESERVED) {
+            log.warn("Cannot confirm reservation in status: {} for Order ID: {}", reservation.getStatus(), orderId);
+            throw new InvalidStateException("Reservation must be in RESERVED state to confirm");
+        }
+        // Permanently deduct stock from both total and reserved
+        int rowsAffected = productRepository.confirmStock(reservation.getProductId(), reservation.getQuantity());
+        if (rowsAffected == 0) {
+            log.error("Failed to confirm stock. Inconsistent reserved stock for product ID: {}", reservation.getProductId());
+            throw new InvalidStateException("Failed to confirm stock: Inconsistent reserved stock for product ID: " + reservation.getProductId());
+        }
+        reservation.setStatus(ReservationStatus.CONFIRMED);
+        Reservation savedReservation = reservationRepository.save(reservation);
+        log.info("Reservation confirmed and stock deducted for Order ID: {}", orderId);
+        return mapToReservationResponse(savedReservation);
+    }
+
+    @Override
+    @Transactional
+    public ReservationResponse releaseReservation(String orderId) {
+        log.info("Releasing reservation for Order ID: {}", orderId);
+        Reservation reservation = reservationRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Reservation not found for orderId: " + orderId));
+
+        if (reservation.getStatus() != ReservationStatus.RESERVED) {
+            log.warn("Cannot release reservation in status: {} for Order ID: {}", reservation.getStatus(), orderId);
+            throw new InvalidStateException("Reservation must be in RESERVED state to release");
+        }
+
+        // Restore stock
+        int rowsAffected = productRepository.restoreStock(reservation.getProductId(), reservation.getQuantity());
+        if (rowsAffected == 0) {
+            log.error("Failed to restore stock for product: {}", reservation.getProductId());
+        }
+
+        reservation.setStatus(ReservationStatus.RELEASED);
+        Reservation savedReservation = reservationRepository.save(reservation);
+        log.info("Reservation released and stock restored for Order ID: {}", orderId);
+        return mapToReservationResponse(savedReservation);
+    }
+
+    @Override
+    @Transactional
+    public ReservationResponse cancelReservation(String orderId) {
+        log.info("Cancelling reservation for Order ID: {}", orderId);
+        Reservation reservation = reservationRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Reservation not found for orderId: " + orderId));
+
+        if (reservation.getStatus() == ReservationStatus.CONFIRMED) {
+            // Case 1: Post-confirmation cancellation (Restocking)
+            log.info("Restocking confirmed reservation for Order ID: {}", orderId);
+            productRepository.restockProduct(reservation.getProductId(), reservation.getQuantity());
+        } else if (reservation.getStatus() == ReservationStatus.RESERVED) {
+            // Case 2: Pre-confirmation cancellation (Releasing stock)
+            log.info("Releasing reserved stock for Order ID: {}", orderId);
+            productRepository.restoreStock(reservation.getProductId(), reservation.getQuantity());
+        } else {
+            // Case 3: Already cancelled/released/expired
+            log.warn("Cannot cancel reservation in status: {} for Order ID: {}", reservation.getStatus(), orderId);
+            throw new InvalidStateException("Reservation must be in RESERVED or CONFIRMED state to cancel");
+        }
+
+        reservation.setStatus(ReservationStatus.CANCELLED);
+        Reservation savedReservation = reservationRepository.save(reservation);
+        log.info("Reservation cancelled for Order ID: {}", orderId);
+        return mapToReservationResponse(savedReservation);
+    }
+
+    @Override
+    @Transactional
+    @Scheduled(fixedRate = 60000)
+    public void expireReservations() {
+        log.debug("Running expiry scheduler...");
+        List<Reservation> expiredReservations = reservationRepository.findAllByStatusAndExpiresAtBefore(ReservationStatus.RESERVED, Instant.now());
+        if (expiredReservations.isEmpty()) {
+            return;
+        }
+
+        log.info("Found {} expired reservations to process", expiredReservations.size());
+        for (Reservation reservation : expiredReservations) {
+            try {
+                productRepository.restoreStock(reservation.getProductId(), reservation.getQuantity());
+                reservation.setStatus(ReservationStatus.EXPIRED);
+                reservationRepository.save(reservation);
+                log.info("Expired reservation for Order ID: {}", reservation.getOrderId());
+            } catch (Exception e) {
+                log.error("Error expiring reservation for Order ID: {}", reservation.getOrderId(), e);
+            }
+        }
+    }
+
     private ProductResponse mapToProductResponse(Product product) {
         return ProductResponse.builder()
                 .id(product.getId())
                 .name(product.getName())
                 .totalStock(product.getTotalStock())
                 .reservedStock(product.getReservedStock())
-                .availableStock(product.getTotalStock() - product.getReservedStock())
+                .availableStock(product.getAvailableStock())
                 .build();
     }
 
