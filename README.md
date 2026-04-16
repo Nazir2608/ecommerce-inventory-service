@@ -42,23 +42,23 @@ A single deployable JAR — stateless service, internally modular.
 
 ```
                  ┌─────────────────────┐
-                 │        Client        │
+                 │        Client       │
                  └──────────┬──────────┘
                             ↓
                  ┌─────────────────────┐
-                 │    Load Balancer     │
+                 │    Load Balancer    │
                  └──────────┬──────────┘
                             ↓
                  ┌─────────────────────┐
-                 │ Inventory Application│
-                 │  (Spring Boot)       │
-                 │----------------------│
-                 │  product module      │
-                 │  reservation module  │
-                 │  stock module        │
-                 │  flashsale module    │
-                 │  scheduler module    │
-                 │  event module        │
+                 │Inventory Application│
+                 │  (Spring Boot)      │
+                 │---------------------│
+                 │  product module     │
+                 │  reservation module │
+                 │  stock module       │
+                 │  flashsale module   │
+                 │  scheduler module   │
+                 │  event module       │
                  └──────────┬──────────┘
                             ↓
          ┌──────────────────┼──────────────────┐
